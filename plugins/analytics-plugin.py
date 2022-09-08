@@ -7,15 +7,32 @@ from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, request
 from flask_appbuilder import BaseView as AppBuilderBaseView 
 from flask_appbuilder import expose
+from airflow import configuration
 
 bp = Blueprint(
     "astronomer_analytics",
     __name__,
     template_folder="templates",  # registers airflow/plugins/templates as a Jinja template folder
     static_folder="static",
-    static_url_path="/static/astronomer_analytics",
+    static_url_path="/static/analytics-plugin",
 )
+airflow_webserver_base_url = configuration.get('webserver', 'BASE_URL')
 
+apis_metadata = [
+        {
+        "name": "tasks",
+        "description": "return number of successful and failed tasks for specified time period",
+        "airflow_version": "xxx",
+        "http_method": ["GET"],
+        "arguments": [
+           {"name": "startDate",
+                "description": "The start date of the DAG (Example: YYYY-MM-DD )", "form_input_type": "text", "required": True},
+           {"name": "endDate",
+                "description": "The end date of the DAG (Example: YYYY-MM-DD)", "form_input_type": "text", "required": True},
+ 
+       ]
+    }
+]
 try:
     from airflow.utils.session import provide_session
 except:
@@ -90,13 +107,20 @@ def dags_report(session) -> Any:
     """
     )
     return [dict(r) for r in session.execute(sql)]
-
+rest_api_endpoint = "/api/v1"
 # Creating a flask appbuilder BaseView
 class AstronomerAnalytics(AppBuilderBaseView):
     default_view = "test" 
 
-    @expose("/v1/tasks")
-    def test(self):
+    @expose("/")
+    def index(self):
+            return self.render_template("/rest_api_plugin/index.html",
+                airflow_webserver_base_url=airflow_webserver_base_url,
+                rest_api_endpoint=rest_api_endpoint,
+                apis_metadata=apis_metadata,
+            )        
+    @expose("api/v1/tasks")
+    def tasks(self):
       def try_reporter(r):
         try:
             return {r.__name__: r()}
