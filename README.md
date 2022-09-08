@@ -9,8 +9,10 @@ https://airflow.apache.org/docs/apache-airflow/stable/plugins.html
 you must have the astro cli installed
 
 1. clone repo
-2. run `astro dev start`
-3. check the astro ui based on what command like tells you 
+2. run `astro dev init`
+3. copy files in plugins directory into plugins directory that was created when you run astro dev init
+4. run `astro dev start` 
+5. check the astro ui based on what command like tells you 
 ```
 Example: 
 Project is running! All components are now available.
