@@ -1,0 +1,50 @@
+# Plugin used to get analytics from deployments for software platform (gen1) 
+
+## in plugins directory you can find file "astro-analytics"
+Which finds a db session using how telescope does it and then has a function to query the db directly for the information we want.   
+Airflow allows you to make plugins by simply dropping them in the plugins repo and using `AirflowPlugin` class with all the required fields:  
+https://airflow.apache.org/docs/apache-airflow/stable/plugins.html 
+
+## How do I test this repo
+you must have the astro cli installed
+
+1. clone repo
+2. run `astro dev start`
+3. check the astro ui based on what command like tells you 
+```
+Example: 
+Project is running! All components are now available.
+Airflow Webserver: http://localhost:8080
+Postgres Database: localhost:5432/postgres
+```
+login with provided username/pass
+Look at the bar at the top and find "AstronomerAnalytics" 
+That means its working
+
+4. Do HTTP request
+
+Do a HTTP get request `http://localhost:8080/astronomeranalytics/v1/tasks?startDate=2022-08-01&endDate=2022-08-30`  
+with params startDate and endDate with the format  
+YYYY-MM-DD   
+Will retrieve dag data from the specified dates  
+
+
+Example response
+```JSON
+{
+    "dags": {
+        "dags_report": [
+            {
+                "date": "2022-08-01",
+                "total_failed": 0,
+                "total_success": 0
+            },
+            {
+                "date": "2022-08-02",
+                "total_failed": 0,
+                "total_success": 0
+            },
+        ]
+    }
+}
+```
