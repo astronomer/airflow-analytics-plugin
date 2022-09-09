@@ -135,7 +135,7 @@ class AstronomerAnalytics(AppBuilderBaseView):
 
 v_appbuilder_view = AstronomerAnalytics()
 v_appbuilder_package = {
-    "name": "View Results",
+    "name": "API's",
     "category": "AstronomerAnalytics",
     "view": v_appbuilder_view,
 }
@@ -149,7 +149,7 @@ class AstronomerPlugin(AirflowPlugin):
     flask_blueprints = [bp]
     appbuilder_views = [
         {
-            "name": "View Results",
+            "name": "API's",
             "category": "AstronomerAnalytics",
             "view": v_appbuilder_view,
         },
