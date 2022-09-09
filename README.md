@@ -50,3 +50,5 @@ Example response
     }
 }
 ```
+
+based on https://github.com/teamclairvoyant/airflow-rest-api-plugin and telescope repo

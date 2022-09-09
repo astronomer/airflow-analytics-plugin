@@ -8,3 +8,4 @@ packages.txt
 requirements.txt
 .dockerignore
 .astro
+plugins/__pycache__

@@ -14,7 +14,7 @@ bp = Blueprint(
     __name__,
     template_folder="templates",  # registers airflow/plugins/templates as a Jinja template folder
     static_folder="static",
-    static_url_path="/static/analytics-plugin",
+    static_url_path="/static/",
 )
 airflow_webserver_base_url = configuration.get('webserver', 'BASE_URL')
 
@@ -26,9 +26,9 @@ apis_metadata = [
         "http_method": ["GET"],
         "arguments": [
            {"name": "startDate",
-                "description": "The start date of the DAG (Example: YYYY-MM-DD )", "form_input_type": "text", "required": True},
+                "description": "The start date of the task period (Example: YYYY-MM-DD )", "form_input_type": "text", "required": True},
            {"name": "endDate",
-                "description": "The end date of the DAG (Example: YYYY-MM-DD)", "form_input_type": "text", "required": True},
+                "description": "The end date of the task period (Example: YYYY-MM-DD)", "form_input_type": "text", "required": True},
  
        ]
     }
@@ -107,14 +107,14 @@ def dags_report(session) -> Any:
     """
     )
     return [dict(r) for r in session.execute(sql)]
-rest_api_endpoint = "/api/v1"
+rest_api_endpoint = "/astronomeranalytics/api/v1/"
 # Creating a flask appbuilder BaseView
 class AstronomerAnalytics(AppBuilderBaseView):
-    default_view = "test" 
+    default_view = "index" 
 
     @expose("/")
     def index(self):
-            return self.render_template("/rest_api_plugin/index.html",
+            return self.render_template("/analytics-plugin/index.html",
                 airflow_webserver_base_url=airflow_webserver_base_url,
                 rest_api_endpoint=rest_api_endpoint,
                 apis_metadata=apis_metadata,
