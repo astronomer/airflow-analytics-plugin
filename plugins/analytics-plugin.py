@@ -107,6 +107,7 @@ def dags_report(session) -> Any:
     """
     )
     return [dict(r) for r in session.execute(sql)]
+
 rest_api_endpoint = "/astronomeranalytics/api/v1/"
 # Creating a flask appbuilder BaseView
 class AstronomerAnalytics(AppBuilderBaseView):
@@ -119,6 +120,7 @@ class AstronomerAnalytics(AppBuilderBaseView):
                 rest_api_endpoint=rest_api_endpoint,
                 apis_metadata=apis_metadata,
             )        
+
     @expose("api/v1/tasks")
     def tasks(self):
       def try_reporter(r):
