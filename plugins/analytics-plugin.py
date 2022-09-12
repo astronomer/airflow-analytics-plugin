@@ -1,4 +1,5 @@
 from typing import Any 
+from datetime import datetime
 
 import logging
 from sqlalchemy import text
@@ -91,22 +92,29 @@ except:
 
 @provide_session
 def dags_report(session) -> Any:
-    start_date = request.args.get("startDate") # 2022-08-01
-    end_date = request.args.get("endDate") #2022-08-30
- 
-    sql = text(
-        f"""
-        select date::date, coalesce(total_success, 0) as total_success, coalesce(total_failed, 0) as total_failed
-        from generate_series('{start_date}', '{end_date}', '1 day'::interval) date
-        left join 
-            (select start_date::date, count(*) as total_success from task_instance where state = 'success' group by 1) t 
-            on t.start_date::date = date.date
-        left join 
-            (select start_date::date, count(*) as total_failed from task_instance where state = 'failed' group by 1) j 
-            on j.start_date::date = date.date
-    """
-    )
-    return [dict(r) for r in session.execute(sql)]
+    format_YYYYMMDD = "%Y-%m-%d"
+    start_date_input = request.args.get("startDate") # 2022-08-01
+    end_date_input = request.args.get("endDate") #2022-08-30
+    try:
+        start_date = datetime.strptime(start_date_input, format_YYYYMMDD)
+        end_date = datetime.strptime(end_date_input, format_YYYYMMDD)
+        sql = text(
+            f"""
+            select date::date, coalesce(total_success, 0) as total_success, coalesce(total_failed, 0) as total_failed
+            from generate_series('{start_date}', '{end_date}', '1 day'::interval) date
+            left join 
+                (select start_date::date, count(*) as total_success from task_instance where state = 'success' group by 1) t 
+                on t.start_date::date = date.date
+            left join 
+                (select start_date::date, count(*) as total_failed from task_instance where state = 'failed' group by 1) j 
+                on j.start_date::date = date.date
+        """
+        )
+        return [dict(r) for r in session.execute(sql)]
+
+    except ValueError:
+        print("The string is not a date with format " + format_YYYYMMDD)
+
 
 rest_api_endpoint = "/astronomeranalytics/api/v1/"
 # Creating a flask appbuilder BaseView
