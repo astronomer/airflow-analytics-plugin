@@ -103,11 +103,11 @@ def dags_report(session) -> Any:
             select date::date, coalesce(total_success, 0) as total_success, coalesce(total_failed, 0) as total_failed
             from generate_series('{start_date}', '{end_date}', '1 day'::interval) date
             left join 
-                (select start_date::date, count(*) as total_success from task_instance where state = 'success' group by 1) t 
-                on t.start_date::date = date.date
+                (select dttm::date, count(*) as total_success from log where event = 'success' group by 1) t 
+                on t.dttm::date = date.date
             left join 
-                (select start_date::date, count(*) as total_failed from task_instance where state = 'failed' group by 1) j 
-                on j.start_date::date = date.date
+                (select dttm::date, count(*) as total_failed from log where event = 'failed' group by 1) j 
+                on j.dttm::date = date.date
         """
         )
         return [dict(r) for r in session.execute(sql)]
