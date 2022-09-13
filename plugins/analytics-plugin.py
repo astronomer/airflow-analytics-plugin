@@ -9,6 +9,7 @@ from flask import Blueprint, request
 from flask_appbuilder import BaseView as AppBuilderBaseView 
 from flask_appbuilder import expose
 from airflow import configuration
+__version__ = "0.0.1"
 
 bp = Blueprint(
     "astronomer_analytics",
