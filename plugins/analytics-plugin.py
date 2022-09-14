@@ -104,10 +104,10 @@ def dags_report(session) -> Any:
             select date::date, coalesce(total_success, 0) as total_success, coalesce(total_failed, 0) as total_failed
             from generate_series('{start_date}', '{end_date}', '1 day'::interval) date
             left join 
-                (select dttm::date, count(*) as total_success from log l join task_instance ti ON l.event = 'success' and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by 1) t 
+                (select dttm::date, count(*) as total_success from log l join task_instance ti ON l.event = 'success' and l.dttm >= '{start_date}' and l.dttm <=  '{end_date}' and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by 1) t 
                 on t.dttm::date = date.date
             left join 
-                (select dttm::date, count(*) as total_failed from log l join task_instance ti ON event = 'failed'and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by 1) j 
+                (select dttm::date, count(*) as total_failed from log l join task_instance ti ON event = 'failed' and l.dttm >= '{start_date}' and l.dttm <=  '{end_date}' and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by 1) j 
                 on j.dttm::date = date.date
         """
         )
