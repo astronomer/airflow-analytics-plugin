@@ -9,6 +9,7 @@ from flask import Blueprint, request
 from flask_appbuilder import BaseView as AppBuilderBaseView 
 from flask_appbuilder import expose
 from airflow import configuration
+log = logging.getLogger(__name__)
 
 bp = Blueprint(
     "astronomer_analytics",
@@ -98,17 +99,14 @@ def dags_report(session) -> Any:
     try:
         start_date = datetime.strptime(start_date_input, format_YYYYMMDD)
         end_date = datetime.strptime(end_date_input, format_YYYYMMDD)
-        # remove the dummy operator and the astronomer_monitoring_dag that is added in runtime for task count
+        # remove the dummy operator and the astronomer_monitoring_dag that is added in runtime from task count
         sql = text(
             f"""
-            select date::date, coalesce(total_success, 0) as total_success, coalesce(total_failed, 0) as total_failed
-            from generate_series('{start_date}', '{end_date}', '1 day'::interval) date
+            select date::date, totalCount, event
+            from generate_series('2022-09-01', '2022-09-30', '1 day'::interval) date
             left join 
-                (select dttm::date, count(*) as total_success from log l join task_instance ti ON l.event = 'success' and l.dttm >= '{start_date}' and l.dttm <=  '{end_date}' and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by 1) t 
+                (select event, dttm::date, count(*) as totalCount from log l join task_instance ti on event in ('success', 'cli_task_run') and l.dttm >= '2022-09-01' and l.dttm <= '2022-09-30'  and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by event, dttm::date ) t 
                 on t.dttm::date = date.date
-            left join 
-                (select dttm::date, count(*) as total_failed from log l join task_instance ti ON event = 'failed' and l.dttm >= '{start_date}' and l.dttm <=  '{end_date}' and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by 1) j 
-                on j.dttm::date = date.date
         """
         )
         return [dict(r) for r in session.execute(sql)]
@@ -116,6 +114,29 @@ def dags_report(session) -> Any:
     except ValueError:
         print("The string is not a date with format " + format_YYYYMMDD)
 
+def format_db_response(resp):
+    task_summary_arr = resp["dags_report"]
+    key_conversion = {
+        'success': 'total_success',
+        'error': 'total_failed'
+    }
+    temp_result = {}
+    for date_task_summary in task_summary_arr:
+        dateStr = date_task_summary['date'].strftime("%Y-%m-%d")
+        if dateStr not in temp_result:
+            temp_result[dateStr] = {'total_success': 0, 'total_failed': 0}
+        elif date_task_summary['event'] != None:
+            fieldName = key_conversion[date_task_summary['event']]
+            temp_result[dateStr][fieldName]=date_task_summary['totalcount']
+
+    result = []
+    for key in temp_result.keys():
+        result.append({
+            'date': key,
+            'total_success': temp_result[key]['total_success'],
+            'total_failed': temp_result[key]['total_failed'],
+        })
+    return result
 
 rest_api_endpoint = "/astronomeranalytics/api/v1/"
 # Creating a flask appbuilder BaseView
@@ -139,8 +160,7 @@ class AstronomerAnalytics(AppBuilderBaseView):
             logging.exception(f"Failed reporting {r.__name__}")
             return {r.__name__: str(e)}
       dags = try_reporter(dags_report) 
-      return  { f"dags": dags }
-
+      return  { f"dags": format_db_response(dags) }
 
 v_appbuilder_view = AstronomerAnalytics()
 v_appbuilder_package = {
