@@ -1,5 +1,5 @@
 from typing import Any 
-from datetime import datetime
+from dateutil.parser import parse
 
 import logging
 from sqlalchemy import text
@@ -93,26 +93,21 @@ except:
 
 @provide_session
 def dags_report(session) -> Any:
-    format_YYYYMMDD = "%Y-%m-%d"
-    start_date_input = request.args.get("startDate") # 2022-08-01
-    end_date_input = request.args.get("endDate") #2022-08-30
+    start_date = request.args.get("startDate") # 2022-08-01
+    end_date = request.args.get("endDate") #2022-08-30
     try:
-        start_date = datetime.strptime(start_date_input, format_YYYYMMDD)
-        end_date = datetime.strptime(end_date_input, format_YYYYMMDD)
+        parse(start_date)
+        parse(end_date)
         # remove the dummy operator and the astronomer_monitoring_dag that is added in runtime from task count
         sql = text(
             f"""
-            select date::date, totalCount, event
-            from generate_series('2022-09-01', '2022-09-30', '1 day'::interval) date
-            left join 
-                (select event, dttm::date, count(*) as totalCount from log l join task_instance ti on event in ('success', 'cli_task_run') and l.dttm >= '2022-09-01' and l.dttm <= '2022-09-30'  and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by event, dttm::date ) t 
-                on t.dttm::date = date.date
+            select event, count(*) as totalCount from log l join task_instance ti on event in ('success', 'error') and l.dttm >= '{start_date}' and l.dttm <= '{end_date}'  and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by event
         """
         )
         return [dict(r) for r in session.execute(sql)]
 
     except ValueError:
-        print("The string is not a date with format " + format_YYYYMMDD)
+        print("The string is not a date ")
 
 def format_db_response(resp):
     task_summary_arr = resp["dags_report"]
@@ -122,21 +117,10 @@ def format_db_response(resp):
     }
     temp_result = {}
     for date_task_summary in task_summary_arr:
-        dateStr = date_task_summary['date'].strftime("%Y-%m-%d")
-        if dateStr not in temp_result:
-            temp_result[dateStr] = {'total_success': 0, 'total_failed': 0}
-        elif date_task_summary['event'] != None:
             fieldName = key_conversion[date_task_summary['event']]
-            temp_result[dateStr][fieldName]=date_task_summary['totalcount']
+            temp_result[fieldName]=date_task_summary['totalcount']
 
-    result = []
-    for key in temp_result.keys():
-        result.append({
-            'date': key,
-            'total_success': temp_result[key]['total_success'],
-            'total_failed': temp_result[key]['total_failed'],
-        })
-    return result
+    return temp_result
 
 rest_api_endpoint = "/astronomeranalytics/api/v1/"
 # Creating a flask appbuilder BaseView
