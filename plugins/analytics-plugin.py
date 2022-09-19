@@ -1,3 +1,4 @@
+from pickle import NONE
 from typing import Any 
 from dateutil.parser import parse
 
@@ -107,10 +108,12 @@ def dags_report(session) -> Any:
         return [dict(r) for r in session.execute(sql)]
 
     except ValueError:
-        print("The string is not a date ")
+        log.error("The string is not a date ")
 
 def format_db_response(resp):
+    log.info(resp)
     task_summary_arr = resp["dags_report"]
+
     key_conversion = {
         'success': 'total_success',
         'error': 'total_failed'
@@ -144,6 +147,8 @@ class AstronomerAnalytics(AppBuilderBaseView):
             logging.exception(f"Failed reporting {r.__name__}")
             return {r.__name__: str(e)}
       dags = try_reporter(dags_report) 
+      if dags["dags_report"] == None:
+        return {"message": "Invalid date"}
       return  { f"dags": format_db_response(dags) }
 
 v_appbuilder_view = AstronomerAnalytics()
