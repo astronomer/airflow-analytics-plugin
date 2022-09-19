@@ -35,18 +35,8 @@ Example response
 ```JSON
 {
     "dags": {
-        "dags_report": [
-            {
-                "date": "2022-08-01",
-                "total_failed": 0,
-                "total_success": 0
-            },
-            {
-                "date": "2022-08-02",
-                "total_failed": 0,
-                "total_success": 0
-            },
-        ]
+        "total_failed": 25841090,
+        "total_success": 12826442
     }
 }
 ```
