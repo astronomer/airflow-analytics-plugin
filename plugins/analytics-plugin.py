@@ -102,7 +102,7 @@ def dags_report(session) -> Any:
         # remove the dummy operator and the astronomer_monitoring_dag that is added in runtime from task count
         sql = text(
             f"""
-            select event, count(*) as totalCount from log l join task_instance ti on event in ('success', 'error') and l.dttm >= '{start_date}' and l.dttm <= '{end_date}' and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by event
+            select event, count(*) as totalCount from log l join task_instance ti on event in ('success', 'failed') and l.dttm >= '{start_date}' and l.dttm <= '{end_date}' and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by event
         """
         )
         return [dict(r) for r in session.execute(sql)]
@@ -116,7 +116,7 @@ def format_db_response(resp):
 
     key_conversion = {
         'success': 'total_success',
-        'error': 'total_failed'
+        'failed': 'total_failed'
     }
     temp_result = {}
     for date_task_summary in task_summary_arr:
