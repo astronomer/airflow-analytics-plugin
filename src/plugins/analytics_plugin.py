@@ -11,6 +11,7 @@ from flask_appbuilder import BaseView as AppBuilderBaseView
 from flask_appbuilder import expose
 from airflow import configuration
 log = logging.getLogger(__name__)
+__version__ = "1.0.0"
 
 bp = Blueprint(
     "astronomer_analytics",
@@ -132,7 +133,7 @@ class AstronomerAnalytics(AppBuilderBaseView):
 
     @expose("/")
     def index(self):
-            return self.render_template("/analytics-plugin/index.html",
+            return self.render_template("/analytics_plugin/index.html",
                 airflow_webserver_base_url=airflow_webserver_base_url,
                 rest_api_endpoint=rest_api_endpoint,
                 apis_metadata=apis_metadata,

@@ -1,0 +1,2 @@
+include src/plugins/*
+include src/plugins/templates/analytics_plugin/*.html

@@ -9,3 +9,5 @@ requirements.txt
 .dockerignore
 .astro
 plugins/__pycache__
+.DS_Store
+dist/

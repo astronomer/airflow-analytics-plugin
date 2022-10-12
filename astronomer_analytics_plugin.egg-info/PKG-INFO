@@ -1,3 +1,22 @@
+Metadata-Version: 2.1
+Name: astronomer-analytics-plugin
+Version: 0.0.10
+Summary: Analytics Plugin for Astronomer Platform
+Home-page: https://github.com/astronomer/airflow-analytics-plugin
+Author: astronomerio
+Author-email: humans@astronomer.io
+License: Apache2
+Platform: any
+Classifier: Environment :: Web Environment
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Programming Language :: Python :: 3
+Description-Content-Type: text/markdown
+Provides-Extra: test
+License-File: LICENSE
+
 # Plugin used to get analytics from deployments for software platform (gen1) 
 
 ## in plugins directory you can find file "astro-analytics"
@@ -42,11 +61,3 @@ Example response
 ```
 
 based on https://github.com/teamclairvoyant/airflow-rest-api-plugin and telescope repo
-
-## How do I publish to pip
-
-1. Update the version in the setup.py file 
-2. Run python -m build
-3. Run twine upload dist/* (If you want to test before publishing to "prod" use twine upload -r testpypi dist/*)
-4. pip install -i https://test.pypi.org/simple/ astronomer-analytics-plugin==1.0.0
-( or if using test pypi: pip install -i https://test.pypi.org/simple/ astronomer-analytics-plugin==1.0.0)
