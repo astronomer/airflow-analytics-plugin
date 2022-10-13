@@ -25,29 +25,36 @@ bp = Blueprint(
     static_folder="static",
     static_url_path="/static/",
 )
-airflow_webserver_base_url = configuration.get('webserver', 'BASE_URL')
+airflow_webserver_base_url = configuration.get("webserver", "BASE_URL")
 
 apis_metadata = [
-        {
+    {
         "name": "tasks",
         "description": "return number of successful and failed tasks for specified time period",
         "airflow_version": "xxx",  # airflow.version something like that
         "http_method": ["GET"],
         "arguments": [
-           {"name": "startDate",
-                "description": "The start date of the task period (Example: YYYY-MM-DD )", "form_input_type": "text", "required": True},
-           {"name": "endDate",
-                "description": "The end date of the task period (Example: YYYY-MM-DD)", "form_input_type": "text", "required": True},
-
-       ]
+            {
+                "name": "startDate",
+                "description": "The start date of the task period (Example: YYYY-MM-DD )",
+                "form_input_type": "text",
+                "required": True,
+            },
+            {
+                "name": "endDate",
+                "description": "The end date of the task period (Example: YYYY-MM-DD)",
+                "form_input_type": "text",
+                "required": True,
+            },
+        ],
     }
 ]
 
 
 @provide_session
 def dags_report(session) -> Any:
-    untrusted_start_date = request.args.get("startDate") # 2022-08-01
-    untrusted_end_date = request.args.get("endDate") #2022-08-30
+    untrusted_start_date = request.args.get("startDate")  # 2022-08-01
+    untrusted_end_date = request.args.get("endDate")  # 2022-08-30
     try:
         parse(untrusted_start_date)
         parse(untrusted_end_date)
@@ -61,8 +68,10 @@ def dags_report(session) -> Any:
                 func.count(Log.event).label("totalCount"),
             )
             .join(
-                TaskInstance.event.in_(TaskInstanceState.SUCCESS, TaskInstanceState.FAILED),
-                TaskInstance.operator != 'DummyOperator',
+                TaskInstance.event.in_(
+                    TaskInstanceState.SUCCESS, TaskInstanceState.FAILED
+                ),
+                TaskInstance.operator != "DummyOperator",
                 TaskInstance.task_id == Log.task_id,
             )
             .filter(
@@ -76,19 +85,15 @@ def dags_report(session) -> Any:
         return [dict(result_row) for result_row in session.query(query).all()]
 
 
-
 def format_db_response(resp):
     log.info(resp)
     task_summary_arr = resp["dags_report"]
 
-    key_conversion = {
-        'success': 'total_success',
-        'failed': 'total_failed'
-    }
+    key_conversion = {"success": "total_success", "failed": "total_failed"}
     temp_result = {}
     for date_task_summary in task_summary_arr:
-        fieldName = key_conversion[date_task_summary['event']]
-        temp_result[fieldName]=date_task_summary['totalcount']
+        fieldName = key_conversion[date_task_summary["event"]]
+        temp_result[fieldName] = date_task_summary["totalcount"]
 
     return temp_result
 
@@ -115,7 +120,8 @@ class AstronomerAnalytics(AppBuilderBaseView):
 
     @expose("/")
     def index(self):
-        return self.render_template("/analytics_plugin/index.html",
+        return self.render_template(
+            "/analytics_plugin/index.html",
             airflow_webserver_base_url=airflow_webserver_base_url,
             rest_api_endpoint=rest_api_endpoint,
             apis_metadata=apis_metadata,
@@ -129,9 +135,7 @@ class AstronomerAnalytics(AppBuilderBaseView):
             return {
                 "message": "Invalid date",
             }
-        return  {
-            f"dags": format_db_response(dags)
-        }
+        return {f"dags": format_db_response(dags)}
 
 
 # Defining the plugin class
