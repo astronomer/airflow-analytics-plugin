@@ -41,52 +41,56 @@ def tasks_report(session) -> Any:
         log.error(f"The string is not a date: {e}")
         raise e
     else:
-        log_success = aliased(Log, name="log_success")
-        log_failed = aliased(Log, name="log_failed")
         # remove the dummy operator and the astronomer_monitoring_dag that is added in runtime from task count
         query = (
             session.query(
-                func.count(distinct(log_success.id)).label("total_success"),
-                func.count(distinct(log_failed.id)).label("total_failed"),
+                Log.event.label("event"),
+                func.count(Log.id).label("totalCount"),
             )
-            .select_from(TaskInstance)
-            .outerjoin(
-                log_success,
+            .select_from(Log)
+            .join(
+                TaskInstance,
                 and_(
-                    log_success.task_id == TaskInstance.task_id,
-                    log_success.dttm >= start_date,
-                    log_success.dttm <= end_date,
-                    log_success.dag_id != "astronomer_monitoring_dag",
-                    log_success.event == TaskInstanceState.SUCCESS,
+                    Log.event.in_(
+                        [
+                            TaskInstanceState.SUCCESS,
+                            TaskInstanceState.FAILED,
+                        ]
+                    ),
+                    Log.dttm >= start_date,
+                    Log.dttm <= end_date,
+                    TaskInstance.operator != "DummyOperator",
+                    Log.dag_id != "astronomer_monitoring_dag",
+                    TaskInstance.task_id == Log.task_id,
                 ),
-                isouter=True,
             )
-            .outerjoin(
-                log_failed,
-                and_(
-                    log_failed.task_id == TaskInstance.task_id,
-                    log_failed.dttm >= start_date,
-                    log_failed.dttm <= end_date,
-                    log_failed.dag_id != "astronomer_monitoring_dag",
-                    log_success.event == TaskInstanceState.FAILED,
-                ),
-                isouter=True,
-            )
-            .filter(TaskInstance.operator != "DummyOperator")
+            .group_by(Log.event)
         )
+        return dict(query.all())
 
-        return dict(session.query(query).one())
+
+def format_db_response(resp):
+    log.info(resp)
+    task_summary_arr = resp["tasks_report"]
+
+    key_conversion = {"success": "total_success", "failed": "total_failed"}
+    temp_result = {}
+    for date_task_summary in task_summary_arr:
+        fieldName = key_conversion[date_task_summary["event"]]
+        temp_result[fieldName] = date_task_summary["totalCount"]
+
+    return temp_result
 
 
 def try_reporter(reporter_func):
     try:
         rtn = {
-            "results": reporter_func(),
+            reporter_func.__name__: reporter_func(),
         }
     except Exception as e:
         logging.exception(f"Failed reporting {reporter_func.__name__}")
         rtn = {
-            "error": str(e),
+            reporter_func.__name__: str(e),
         }
     return rtn
 
@@ -128,7 +132,7 @@ class AstronomerAnalytics(AppBuilderBaseView):
     @expose("api/v1/tasks")
     def tasks(self):
         return {
-            "tasks": try_reporter(tasks_report),
+            "tasks": format_db_response(try_reporter(tasks_report)),
         }
 
 
