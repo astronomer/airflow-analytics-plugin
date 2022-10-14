@@ -1,9 +1,46 @@
 [build-system]
-requires = ["setuptools>=61.2", "wheel", "pytest-runner~=4.0"]
+requires = ["build", "setuptools>=61.2", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 dynamic = ["version"]
+name = "astronomer-analytics-plugin"
+description = "Analytics Plugin for Astronomer Platform"
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = [
+    "airflow",
+    "analytics",
+    "Astronomer",
+    "astronomer.io",
+    "plugin",
+]
+classifiers = [
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "apache-airflow>=2",
+]
+
+[project.entry-points."airflow.plugins"]
+    astronomer_analytics_plugin = "astronomer_analytics_plugin.analytics_plugin:AstronomerPlugin"
+
+[options.extras_require]
+test = [
+    "flake8",
+    "flake8-import-order>=0.18",
+    "pytest",
+    "pytest-cov",
+    "pytest-flask",
+    "pytest-mock",
+    "pytest-runner~=4.0",
+]
 
 [tool.aliases]
 test = "pytest"
@@ -14,4 +51,11 @@ application-import-names = "astronomer"
 import-order-style = "google"
 
 [tool.setuptools]
-include-package-data = false
+include-package-data = true
+package-dir = { "astronomer_analytics_plugin" = "." }
+
+[tool.setuptools.dynamic]
+version = { attr = "analytics_plugin.__version__" }
+
+[tool.setuptools.package-data]
+astronomer_analytics_plugin = ["templates/analytics_plugin/index.html"]

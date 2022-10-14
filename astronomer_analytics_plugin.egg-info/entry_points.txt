@@ -1,2 +1,0 @@
-[airflow.plugins]
-astronomer_analytics_plugin = astronomer_analytics_plugin.analytics_plugin:AstronomerPlugin
