@@ -1,2 +1,17 @@
 [build-system]
-requires = ["setuptools>=40.8.0", "wheel", "pytest-runner~=4.0"]
+requires = ["setuptools>=61.2", "wheel", "pytest-runner~=4.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version"]
+
+[tool.aliases]
+test = "pytest"
+
+[tool.flake8]
+max-line-length = "160"
+application-import-names = "astronomer"
+import-order-style = "google"
+
+[tool.setuptools]
+include-package-data = false
