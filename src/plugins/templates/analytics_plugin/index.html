@@ -70,19 +70,11 @@
 
     <h6>Available in Airflow Version: <b>{{api_metadata.airflow_version}}</b></h6>
     <div>
-        <form method="{{api_metadata.http_method[0]}}"
-              target="_blank"
-              action="{{rest_api_endpoint}}{{api_metadata.name}}"
-              enctype="{{ api_metadata.form_enctype if api_metadata.form_enctype else 'application/x-www-form-urlencoded' }}"
-              onsubmit="return disableEmptyFields(this)"
-        >
-
             <table>
                 {% if api_metadata.arguments|length > 0 or api_metadata.post_arguments|length > 0 %}
 
                     <tr>
                         <th>Argument Name</th>
-                        <th>Input</th>
                         <th>Required</th>
                         <th>Description</th>
                     </tr>
@@ -98,8 +90,6 @@
                             {%endfor%}
                          {%endfor%}
                         </td>
-                        {% else %}
-                        <td><input type="{{argument.form_input_type}}" name="{{argument.name}}"/></td>
                         {% endif %}
                         <td>{{argument.required}}</td>
                         <td>{{argument.description}}</td>
@@ -118,11 +108,7 @@
                     <b>No Arguments</b>
                 {% endif %}
 
-                <tr>
-                    <td colspan="2"><input type="submit" class="btn btn-primary" value="Execute"/></td>
-                </tr>
             </table>
-        </form>
     </div>
 </div>
 <br/>

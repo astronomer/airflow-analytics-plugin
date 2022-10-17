@@ -71,13 +71,12 @@ def tasks_report(session) -> Any:
 
 def format_db_response(resp):
     log.info(resp)
-    task_summary_arr = resp["tasks_report"]
+    task_summary = resp["tasks_report"]
 
     key_conversion = {"success": "total_success", "failed": "total_failed"}
     temp_result = {}
-    for date_task_summary in task_summary_arr:
-        fieldName = key_conversion[date_task_summary["event"]]
-        temp_result[fieldName] = date_task_summary["totalCount"]
+    for query_field in task_summary.keys():
+        temp_result[key_conversion[query_field]] = task_summary[query_field]
 
     return temp_result
 
@@ -109,7 +108,7 @@ class AstronomerAnalytics(AppBuilderBaseView):
                 {
                     "name": "tasks",
                     "description": "return number of successful and failed tasks for specified time period",
-                    "airflow_version": airflow_version,
+                    "airflow_version": "2.x",
                     "http_method": ["GET"],
                     "arguments": [
                         {
