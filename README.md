@@ -43,10 +43,8 @@ Example response
 
 based on https://github.com/teamclairvoyant/airflow-rest-api-plugin and telescope repo
 
-## How do I publish to pip
+## How do I publish to github
 
 1. Update the version in the setup.py file 
 2. Run python -m build
-3. Run twine upload dist/* (If you want to test before publishing to "prod" use twine upload -r testpypi dist/*)
-4. pip install -i https://test.pypi.org/simple/ astronomer-analytics-plugin==1.0.0
-( or if using test pypi: pip install -i https://test.pypi.org/simple/ astronomer-analytics-plugin==1.0.0)
+3. upload the .whl file generated in the dist folder to github as a release
