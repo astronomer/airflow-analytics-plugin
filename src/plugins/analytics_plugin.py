@@ -1,17 +1,23 @@
-from pickle import NONE
-from typing import Any 
-from dateutil.parser import parse
-
 import logging
-from sqlalchemy import text
+from typing import Any
 
-from airflow.plugins_manager import AirflowPlugin
+from sqlalchemy import and_, distinct, func, text
+from sqlalchemy.orm import aliased
+
 from flask import Blueprint, request
-from flask_appbuilder import BaseView as AppBuilderBaseView 
+from flask_appbuilder import BaseView as AppBuilderBaseView
 from flask_appbuilder import expose
-from airflow import configuration
-log = logging.getLogger(__name__)
+
+from airflow import __version__ as airflow_version, configuration
+from airflow.models import Log, TaskInstance
+from airflow.plugins_manager import AirflowPlugin
+from airflow.utils.session import provide_session
+from airflow.utils.state import TaskInstanceState
+from airflow.utils.timezone import parse
+
 __version__ = "1.0.0"
+
+log = logging.getLogger(__name__)
 
 bp = Blueprint(
     "astronomer_analytics",
@@ -20,160 +26,128 @@ bp = Blueprint(
     static_folder="static",
     static_url_path="/static/",
 )
-airflow_webserver_base_url = configuration.get('webserver', 'BASE_URL')
 
-apis_metadata = [
-        {
-        "name": "tasks",
-        "description": "return number of successful and failed tasks for specified time period",
-        "airflow_version": "xxx",
-        "http_method": ["GET"],
-        "arguments": [
-           {"name": "startDate",
-                "description": "The start date of the task period (Example: YYYY-MM-DD )", "form_input_type": "text", "required": True},
-           {"name": "endDate",
-                "description": "The end date of the task period (Example: YYYY-MM-DD)", "form_input_type": "text", "required": True},
- 
-       ]
-    }
-]
-try:
-    from airflow.utils.session import provide_session
-except:
-    from typing import Callable, Iterator, TypeVar
+airflow_webserver_base_url = configuration.get("webserver", "BASE_URL")
 
-    import contextlib
-    from functools import wraps
-    from inspect import signature
-
-    from airflow import DAG, settings
-
-    RT = TypeVar("RT")
-
-    def find_session_idx(func: Callable[..., RT]) -> int:
-        """Find session index in function call parameter."""
-        func_params = signature(func).parameters
-        try:
-            # func_params is an ordered dict -- this is the "recommended" way of getting the position
-            session_args_idx = tuple(func_params).index("session")
-        except ValueError:
-            raise ValueError(f"Function {func.__qualname__} has no `session` argument") from None
-
-        return session_args_idx
-
-    @contextlib.contextmanager
-    def create_session():
-        """Contextmanager that will create and teardown a session."""
-        session = settings.Session
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-    def provide_session(func: Callable[..., RT]) -> Callable[..., RT]:
-        """
-        Function decorator that provides a session if it isn't provided.
-        If you want to reuse a session or run the function as part of a
-        database transaction, you pass it to the function, if not this wrapper
-        will create one and close it for you.
-        """
-        session_args_idx = find_session_idx(func)
-
-        @wraps(func)
-        def wrapper(*args, **kwargs) -> RT:
-            if "session" in kwargs or session_args_idx < len(args):
-                return func(*args, **kwargs)
-            else:
-                with create_session() as session:
-                    return func(*args, session=session, **kwargs)
-
-        return wrapper
 
 @provide_session
-def dags_report(session) -> Any:
-    start_date = request.args.get("startDate") # 2022-08-01
-    end_date = request.args.get("endDate") #2022-08-30
+def tasks_report(session) -> Any:
+    untrusted_start_date = request.args.get("startDate")  # 2022-08-01
+    untrusted_end_date = request.args.get("endDate")  # 2022-08-30
     try:
-        parse(start_date)
-        parse(end_date)
+        start_date = parse(untrusted_start_date)
+        end_date = parse(untrusted_end_date)
+    except ValueError as e:
+        log.error(f"The string is not a date: {e}")
+        raise e
+    else:
         # remove the dummy operator and the astronomer_monitoring_dag that is added in runtime from task count
-        sql = text(
-            f"""
-            select event, count(*) as totalCount from log l join task_instance ti on event in ('success', 'failed') and l.dttm >= '{start_date}' and l.dttm <= '{end_date}' and ti.operator != 'DummyOperator' and l.dag_id != 'astronomer_monitoring_dag' and ti.task_id = l.task_id group by event
-        """
+        query = (
+            session.query(
+                Log.event.label("event"),
+                func.count(Log.id).label("totalCount"),
+            )
+            .select_from(Log)
+            .join(
+                TaskInstance,
+                and_(
+                    Log.event.in_(
+                        [
+                            TaskInstanceState.SUCCESS,
+                            TaskInstanceState.FAILED,
+                        ]
+                    ),
+                    Log.dttm >= start_date,
+                    Log.dttm <= end_date,
+                    TaskInstance.operator != "DummyOperator",
+                    Log.dag_id != "astronomer_monitoring_dag",
+                    TaskInstance.task_id == Log.task_id,
+                ),
+            )
+            .group_by(Log.event)
         )
-        return [dict(r) for r in session.execute(sql)]
+        return dict(query.all())
 
-    except ValueError:
-        log.error("The string is not a date ")
 
 def format_db_response(resp):
     log.info(resp)
-    task_summary_arr = resp["dags_report"]
+    task_summary = resp["tasks_report"]
 
-    key_conversion = {
-        'success': 'total_success',
-        'failed': 'total_failed'
-    }
+    key_conversion = {"success": "total_success", "failed": "total_failed"}
     temp_result = {}
-    for date_task_summary in task_summary_arr:
-            fieldName = key_conversion[date_task_summary['event']]
-            temp_result[fieldName]=date_task_summary['totalcount']
+    for query_field in task_summary.keys():
+        temp_result[key_conversion[query_field]] = task_summary[query_field]
 
     return temp_result
 
-rest_api_endpoint = "/astronomeranalytics/api/v1/"
+
+def try_reporter(reporter_func):
+    try:
+        rtn = {
+            reporter_func.__name__: reporter_func(),
+        }
+    except Exception as e:
+        logging.exception(f"Failed reporting {reporter_func.__name__}")
+        rtn = {
+            reporter_func.__name__: str(e),
+        }
+    return rtn
+
+
 # Creating a flask appbuilder BaseView
 class AstronomerAnalytics(AppBuilderBaseView):
-    default_view = "index" 
+    default_view = "index"
 
     @expose("/")
     def index(self):
-            return self.render_template("/analytics_plugin/index.html",
-                airflow_webserver_base_url=airflow_webserver_base_url,
-                rest_api_endpoint=rest_api_endpoint,
-                apis_metadata=apis_metadata,
-            )        
+        return self.render_template(
+            "/analytics_plugin/index.html",
+            airflow_webserver_base_url=airflow_webserver_base_url,
+            rest_api_endpoint="/astronomeranalytics/api/v1/",
+            apis_metadata=[
+                {
+                    "name": "tasks",
+                    "description": "return number of successful and failed tasks for specified time period",
+                    "airflow_version": "2.x",
+                    "http_method": ["GET"],
+                    "arguments": [
+                        {
+                            "name": "startDate",
+                            "description": "The start date of the task period (Example: YYYY-MM-DD )",
+                            "form_input_type": "text",
+                            "required": True,
+                        },
+                        {
+                            "name": "endDate",
+                            "description": "The end date of the task period (Example: YYYY-MM-DD)",
+                            "form_input_type": "text",
+                            "required": True,
+                        },
+                    ],
+                }
+            ],
+        )
 
     @expose("api/v1/tasks")
     def tasks(self):
-      def try_reporter(r):
-        try:
-            return {r.__name__: r()}
-        except Exception as e:
-            logging.exception(f"Failed reporting {r.__name__}")
-            return {r.__name__: str(e)}
-      dags = try_reporter(dags_report) 
-      if dags["dags_report"] == None:
-        return {"message": "Invalid date"}
-      return  { f"dags": format_db_response(dags) }
-
-v_appbuilder_view = AstronomerAnalytics()
-v_appbuilder_package = {
-    "name": "API's",
-    "category": "AstronomerAnalytics",
-    "view": v_appbuilder_view,
-}
+        return {
+            "tasks": format_db_response(try_reporter(tasks_report)),
+        }
 
 
 # Defining the plugin class
 class AstronomerPlugin(AirflowPlugin):
-    name = "AstronomerAnalytics"
+    name = "Astronomer Analytics"
     hooks = []
     macros = []
     flask_blueprints = [bp]
     appbuilder_views = [
         {
-            "name": "API's",
-            "category": "AstronomerAnalytics",
-            "view": v_appbuilder_view,
-        },
+            "name": "APIs",
+            "category": "Astronomer Analytics",
+            "view": AstronomerAnalytics(),
+        }
     ]
     appbuilder_menu_items = []
     global_operator_extra_links = []
     operator_extra_links = []
-
