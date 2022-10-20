@@ -1,9 +1,0 @@
-apache-airflow>=1.10.0
-
-[test]
-flake8
-flake8-import-order>=0.18
-pytest
-pytest-flask
-pytest-mock
-pytest-cov

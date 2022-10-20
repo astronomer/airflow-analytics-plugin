@@ -1,1 +1,0 @@
-astronomer_analytics_plugin

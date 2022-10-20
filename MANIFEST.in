@@ -1,2 +1,3 @@
-include src/plugins/*
-include src/plugins/templates/analytics_plugin/*.html
+include *.in
+include *.py
+include templates/analytics_plugin/*.html

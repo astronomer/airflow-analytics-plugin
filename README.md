@@ -1,50 +1,42 @@
-# Plugin used to get analytics from deployments for software platform (gen1) 
+# Airflow Plugin #
 
-## in plugins directory you can find file "astro-analytics"
-Which finds a db session using how telescope does it and then has a function to query the db directly for the information we want.   
-Airflow allows you to make plugins by simply dropping them in the plugins repo and using `AirflowPlugin` class with all the required fields:  
-https://airflow.apache.org/docs/apache-airflow/stable/plugins.html 
+This is an [Airflow plugin](https://airflow.apache.org/docs/apache-airflow/stable/plugins.html) that directly queries the Airflow metadata database and returns certain analytics at an HTTP endpoint.
+
+This plugin is installed by default in the astro-runtime images starting with 6.1.0-alpha4. It should not need to be manually installed by users.
 
 ## How do I test this repo
-you must have the astro cli installed
 
-1. clone repo
-2. run `astro dev init`
-3. copy files in plugins directory into plugins directory that was created when you run astro dev init
-4. run `astro dev start` 
-5. check the astro ui based on what command like tells you 
-```
-Example: 
-Project is running! All components are now available.
-Airflow Webserver: http://localhost:8080
-Postgres Database: localhost:5432/postgres
-```
-login with provided username/pass
-Look at the bar at the top and find "AstronomerAnalytics" 
-That means its working
+You must have the astro CLI installed.
 
-4. Do HTTP request
+1. Clone repo
+2. Run `astro dev init`
+3. Create a directory and copy some files into the `plugins/` directory of your Astro project:
+   ```bash
+   mkdir plugins/astronomer_analytics_plugin
+   cp analytics_plugin.py plugins/astronomer_analytics_plugin/
+   cp -a templates plugins/astronomer_analytics_plugin/
+   ```
+4. Run `astro dev start`
+5. Login to the local Airflow webserver at `http://localhost:8080` with the username and password provided.
+   If the "Astronomer Analytics" tab is visible at the top of the page, this plugin is installed.
+6. To get the total numbers of successful and failed tasks, initiate an HTTP request:
+   ```bash
+   curl "http://localhost:8080/astronomeranalytics/v1/tasks?startDate=2022-08-01&endDate=2022-08-30"
+   ```
+   with optional URL query parameters startDate and endDate.
 
-Do a HTTP get request `http://localhost:8080/astronomeranalytics/v1/tasks?startDate=2022-08-01&endDate=2022-08-30`  
-with params startDate and endDate with the format  
-YYYY-MM-DD   
-Will retrieve dag data from the specified dates  
+   Example response:
+   ```json
+   {
+       "tasks": {
+           "total_failed": 25841090,
+           "total_success": 12826442
+       }
+   }
+   ```
 
+## Publishing new packages to GitHub
 
-Example response
-```JSON
-{
-    "dags": {
-        "total_failed": 25841090,
-        "total_success": 12826442
-    }
-}
-```
-
-based on https://github.com/teamclairvoyant/airflow-rest-api-plugin and telescope repo
-
-## How do I publish to github
-
-1. Update the version in the setup.py file 
-2. Run python -m build
-3. upload the .whl file generated in the dist folder to github as a release
+1. Update the `__version__` variable in `analytics_plugin.py`
+2. Run `python -m build`
+3. Upload the generated Wheel (`.whl`) and `.tar.gz` files generated in `dist/` to GitHub as a release
