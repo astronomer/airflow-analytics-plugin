@@ -10,12 +10,20 @@ You must have the astro CLI installed.
 
 1. Clone repo
 2. Run `astro dev init`
-3. Create a `plugins/astronomer_analytics_plugin` directory in your local Airflow instance
-3. Copy the `analytics_plugin.py` file in this project directory into the new `plugins/astronomer_analytics_plugin` directory of your local Airflow instance
+3. Create a directory and copy some files into the `plugins/` directory of your Astro project:
+   ```bash
+   mkdir plugins/astronomer_analytics_plugin
+   cp analytics_plugin.py plugins/astronomer_analytics_plugin/
+   cp -a templates plugins/astronomer_analytics_plugin/
+   ```
 4. Run `astro dev start`
 5. Login to the local Airflow webserver at `http://localhost:8080` with the username and password provided.
    If the "Astronomer Analytics" tab is visible at the top of the page, this plugin is installed.
-6. To get the total numbers of successful and failed tasks, initiate an HTTP request `http://localhost:8080/astronomeranalytics/v1/tasks?startDate=2022-08-01&endDate=2022-08-30` with optional URL query parameters startDate and endDate.
+6. To get the total numbers of successful and failed tasks, initiate an HTTP request:
+   ```bash
+   curl "http://localhost:8080/astronomeranalytics/v1/tasks?startDate=2022-08-01&endDate=2022-08-30"
+   ```
+   with optional URL query parameters startDate and endDate.
 
    Example response:
    ```json
@@ -29,6 +37,6 @@ You must have the astro CLI installed.
 
 ## Publishing new packages to GitHub
 
-1. Update the `__version__` variable in `analytics_plugin.py` file
+1. Update the `__version__` variable in `analytics_plugin.py`
 2. Run `python -m build`
-3. Upload the generated Wheel (`.whl`) file generated in the dist folder to GitHub as a release
+3. Upload the generated Wheel (`.whl`) and `.tar.gz` files generated in `dist/` to GitHub as a release
