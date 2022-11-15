@@ -30,8 +30,7 @@ bp = Blueprint(
 airflow_webserver_base_url = configuration.get("webserver", "BASE_URL")
 
 
-@provide_session
-def tasks_report(session) -> Any:
+def tasks_report() -> Any:
     untrusted_start_date = request.args.get("startDate")  # 2022-08-01
     untrusted_end_date = request.args.get("endDate")  # 2022-08-30
     try:
@@ -39,35 +38,44 @@ def tasks_report(session) -> Any:
         end_date = parse(untrusted_end_date)
     except ValueError as e:
         log.error(f"The string is not a date: {e}")
-        raise e
+        raise f"The string is not a date: {e}"
     else:
         # remove the dummy operator and the astronomer_monitoring_dag that is added in runtime from task count
-        query = (
-            session.query(
-                Log.event.label("event"),
-                func.count(Log.id).label("totalCount"),
-            )
-            .select_from(Log)
-            .join(
-                TaskInstance,
-                and_(
-                    Log.event.in_(
-                        [
-                            TaskInstanceState.SUCCESS,
-                            TaskInstanceState.FAILED,
-                        ]
-                    ),
-                    Log.dttm >= start_date,
-                    Log.dttm <= end_date,
-                    TaskInstance.operator != "DummyOperator",
-                    TaskInstance.operator != "EmptyOperator",
-                    Log.dag_id != "astronomer_monitoring_dag",
-                    TaskInstance.task_id == Log.task_id,
-                ),
-            )
-            .group_by(Log.event)
+        return tasks_report_query(start_date=start_date, end_date=end_date)
+
+@provide_session
+def tasks_report_query(session, start_date, end_date) -> Any:
+    query = (
+        session.query(
+            Log.event.label("event"),
+            func.count(Log.id).label("totalCount"),
         )
-        return dict(query.all())
+        .select_from(Log)
+        .join(
+            TaskInstance,
+            and_(
+                Log.event.in_(
+                    [
+                        TaskInstanceState.SUCCESS,
+                        TaskInstanceState.FAILED,
+                    ]
+                ),
+                Log.dttm >= start_date,
+                Log.dttm <= end_date,
+                TaskInstance.operator != "DummyOperator",
+                TaskInstance.operator != "EmptyOperator",
+                Log.dag_id != "astronomer_monitoring_dag",
+                TaskInstance.task_id == Log.task_id,
+            ),
+            Log.dttm >= start_date,
+            Log.dttm <= end_date,
+            TaskInstance.operator != "DummyOperator",
+            Log.dag_id != "astronomer_monitoring_dag",
+            TaskInstance.task_id == Log.task_id,
+        ),
+    ).group_by(Log.event)
+
+    return dict(query.all())
 
 
 def format_db_response(resp):
@@ -98,7 +106,6 @@ def try_reporter(reporter_func):
 # Creating a flask appbuilder BaseView
 class AstronomerAnalytics(AppBuilderBaseView):
     default_view = "index"
-
     @expose("/")
     def index(self):
         return self.render_template(
