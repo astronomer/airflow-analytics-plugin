@@ -38,7 +38,7 @@ def tasks_report() -> Any:
         end_date = parse(untrusted_end_date)
     except ValueError as e:
         log.error(f"The string is not a date: {e}")
-        raise f"The string is not a date: {e}"
+        raise e
     else:
         # remove the dummy operator and the astronomer_monitoring_dag that is added in runtime from task count
         return tasks_report_query(start_date=start_date, end_date=end_date)
@@ -46,30 +46,30 @@ def tasks_report() -> Any:
 @provide_session
 def tasks_report_query(session, start_date, end_date) -> Any:
     query = (
-    session.query(
-        Log.event.label("event"),
-        func.count(Log.id).label("totalCount"),
-    )
-    .select_from(Log)
-    .join(
-        TaskInstance,
-        and_(
-            Log.event.in_(
-                [
-                    TaskInstanceState.SUCCESS,
-                    TaskInstanceState.FAILED,
-                ]
+        session.query(
+            Log.event.label("event"),
+            func.count(Log.id).label("totalCount"),
+        )
+        .select_from(Log)
+        .join(
+            TaskInstance,
+            and_(
+                Log.event.in_(
+                    [
+                        TaskInstanceState.SUCCESS,
+                        TaskInstanceState.FAILED,
+                    ]
+                ),
+                Log.dttm >= start_date,
+                Log.dttm <= end_date,
+                TaskInstance.operator != "DummyOperator",
+                TaskInstance.operator != "EmptyOperator",
+                Log.dag_id != "astronomer_monitoring_dag",
+                TaskInstance.task_id == Log.task_id,
             ),
-            Log.dttm >= start_date,
-            Log.dttm <= end_date,
-            TaskInstance.operator != "DummyOperator",
-            TaskInstance.operator != "EmptyOperator",
-            Log.dag_id != "astronomer_monitoring_dag",
-            TaskInstance.task_id == Log.task_id,
-        ),
+        )
+        .group_by(Log.event)
     )
-    .group_by(Log.event)
-
     return dict(query.all())
 
 
