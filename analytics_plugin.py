@@ -46,34 +46,29 @@ def tasks_report() -> Any:
 @provide_session
 def tasks_report_query(session, start_date, end_date) -> Any:
     query = (
-        session.query(
-            Log.event.label("event"),
-            func.count(Log.id).label("totalCount"),
-        )
-        .select_from(Log)
-        .join(
-            TaskInstance,
-            and_(
-                Log.event.in_(
-                    [
-                        TaskInstanceState.SUCCESS,
-                        TaskInstanceState.FAILED,
-                    ]
-                ),
-                Log.dttm >= start_date,
-                Log.dttm <= end_date,
-                TaskInstance.operator != "DummyOperator",
-                TaskInstance.operator != "EmptyOperator",
-                Log.dag_id != "astronomer_monitoring_dag",
-                TaskInstance.task_id == Log.task_id,
+    session.query(
+        Log.event.label("event"),
+        func.count(Log.id).label("totalCount"),
+    )
+    .select_from(Log)
+    .join(
+        TaskInstance,
+        and_(
+            Log.event.in_(
+                [
+                    TaskInstanceState.SUCCESS,
+                    TaskInstanceState.FAILED,
+                ]
             ),
             Log.dttm >= start_date,
             Log.dttm <= end_date,
             TaskInstance.operator != "DummyOperator",
+            TaskInstance.operator != "EmptyOperator",
             Log.dag_id != "astronomer_monitoring_dag",
             TaskInstance.task_id == Log.task_id,
         ),
-    ).group_by(Log.event)
+    )
+    .group_by(Log.event)
 
     return dict(query.all())
 
