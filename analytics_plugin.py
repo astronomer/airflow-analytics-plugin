@@ -60,6 +60,7 @@ def tasks_report(session) -> Any:
                     Log.dttm >= start_date,
                     Log.dttm <= end_date,
                     TaskInstance.operator != "DummyOperator",
+                    TaskInstance.operator != "EmptyOperator",
                     Log.dag_id != "astronomer_monitoring_dag",
                     TaskInstance.task_id == Log.task_id,
                 ),
