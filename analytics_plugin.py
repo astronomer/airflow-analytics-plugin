@@ -146,8 +146,6 @@ class AstronomerPlugin(AirflowPlugin):
     flask_blueprints = [bp]
     appbuilder_views = [
         {
-            "name": "APIs",
-            "category": "Astronomer Analytics",
             "view": AstronomerAnalytics(),
         }
     ]
