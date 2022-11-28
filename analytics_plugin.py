@@ -100,36 +100,7 @@ def try_reporter(reporter_func):
 
 # Creating a flask appbuilder BaseView
 class AstronomerAnalytics(AppBuilderBaseView):
-    default_view = "index"
-    @expose("/")
-    def index(self):
-        return self.render_template(
-            "/analytics_plugin/index.html",
-            airflow_webserver_base_url=airflow_webserver_base_url,
-            rest_api_endpoint="/astronomeranalytics/api/v1/",
-            apis_metadata=[
-                {
-                    "name": "tasks",
-                    "description": "return number of successful and failed tasks for specified time period",
-                    "airflow_version": "2.x",
-                    "http_method": ["GET"],
-                    "arguments": [
-                        {
-                            "name": "startDate",
-                            "description": "The start date of the task period (Example: YYYY-MM-DD )",
-                            "form_input_type": "text",
-                            "required": True,
-                        },
-                        {
-                            "name": "endDate",
-                            "description": "The end date of the task period (Example: YYYY-MM-DD)",
-                            "form_input_type": "text",
-                            "required": True,
-                        },
-                    ],
-                }
-            ],
-        )
+    default_view = "tasks"
 
     @expose("api/v1/tasks")
     def tasks(self):
@@ -146,8 +117,6 @@ class AstronomerPlugin(AirflowPlugin):
     flask_blueprints = [bp]
     appbuilder_views = [
         {
-            "name": "APIs",
-            "category": "Astronomer Analytics",
             "view": AstronomerAnalytics(),
         }
     ]
