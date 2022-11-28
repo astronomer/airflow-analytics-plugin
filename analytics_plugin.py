@@ -15,7 +15,7 @@ from airflow.utils.session import provide_session
 from airflow.utils.state import TaskInstanceState
 from airflow.utils.timezone import parse
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 
 log = logging.getLogger(__name__)
 
