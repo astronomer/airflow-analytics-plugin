@@ -66,6 +66,9 @@ def tasks_report_query(session, start_date, end_date) -> Any:
                 TaskInstance.operator != "EmptyOperator",
                 Log.dag_id != "astronomer_monitoring_dag",
                 TaskInstance.task_id == Log.task_id,
+                TaskInstance.dag_id == Log.dag_id,
+                TaskInstance.map_index == Log.map_index,
+
             ),
         )
         .group_by(Log.event)
