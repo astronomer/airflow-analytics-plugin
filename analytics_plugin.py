@@ -60,7 +60,7 @@ def tasks_report_query(session, start_date, end_date) -> Any:
                     TaskInstanceState.FAILED,
                 ]
             ),
- 
+            Log.execution_date is not None
         )
         .group_by(Log.event)
     )
