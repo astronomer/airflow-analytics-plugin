@@ -9,7 +9,7 @@ from flask_appbuilder import BaseView as AppBuilderBaseView
 from flask_appbuilder import expose
 
 from airflow import __version__ as airflow_version, configuration
-from airflow.models import Log, TaskInstance
+from airflow.models import Log
 from airflow.plugins_manager import AirflowPlugin
 from airflow.utils.session import provide_session
 from airflow.utils.state import TaskInstanceState
@@ -50,23 +50,17 @@ def tasks_report_query(session, start_date, end_date) -> Any:
             Log.event.label("event"),
             func.count(Log.id).label("totalCount"),
         )
-        .select_from(Log)
-        .join(
-            TaskInstance,
-            and_(
-                Log.event.in_(
-                    [
-                        TaskInstanceState.SUCCESS,
-                        TaskInstanceState.FAILED,
-                    ]
-                ),
-                Log.dttm >= start_date,
-                Log.dttm <= end_date,
-                TaskInstance.operator != "DummyOperator",
-                TaskInstance.operator != "EmptyOperator",
-                Log.dag_id != "astronomer_monitoring_dag",
-                TaskInstance.task_id == Log.task_id,
+        .filter(
+            Log.dttm >= start_date,
+            Log.dttm <= end_date,
+            Log.dag_id != "astronomer_monitoring_dag",
+            Log.event.in_(
+                [
+                    TaskInstanceState.SUCCESS,
+                    TaskInstanceState.FAILED,
+                ]
             ),
+            Log.execution_date is not None
         )
         .group_by(Log.event)
     )
