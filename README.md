@@ -4,7 +4,7 @@ This is an [Airflow plugin](https://airflow.apache.org/docs/apache-airflow/stabl
 
 This plugin is installed by default in the astro-runtime images starting with 6.1.0-alpha4. It should not need to be manually installed by users.
 
-## How do I test this repo
+## How do I test this repo locally
 
 You must have the astro CLI installed.
 
@@ -12,14 +12,11 @@ You must have the astro CLI installed.
 2. Run `astro dev init`
 3. Create a directory and copy some files into the `plugins/` directory of your Astro project:
    ```bash
-   mkdir plugins/astronomer_analytics_plugin
-   cp analytics_plugin.py plugins/astronomer_analytics_plugin/
-   cp -a templates plugins/astronomer_analytics_plugin/
+   cp analytics_plugin.py ./plugins
    ```
 4. Run `astro dev start`
 5. Login to the local Airflow webserver at `http://localhost:8080` with the username and password provided.
-   If the "Astronomer Analytics" tab is visible at the top of the page, this plugin is installed.
-6. To get the total numbers of successful and failed tasks, initiate an HTTP request:
+. To get the total numbers of successful and failed tasks, initiate an HTTP request:
    ```bash
    curl "http://localhost:8080/astronomeranalytics/v1/tasks?startDate=2022-08-01&endDate=2022-08-30"
    ```
